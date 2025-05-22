@@ -45,13 +45,13 @@ enums.iconMaterialsOn = {
     [enums.ELegacyMapMenuIcon.Camp]         = "/Game/UI/Materials/Map/MIC_UI_MapIcon_Camp.MIC_UI_MapIcon_Camp",
     [enums.ELegacyMapMenuIcon.Cave]         = "/Game/UI/Materials/Map/MIC_UI_MapIcon_Cave.MIC_UI_MapIcon_Cave",
     [enums.ELegacyMapMenuIcon.City]         = "/Game/UI/Materials/Map/MIC_UI_MapIcon_City.MIC_UI_MapIcon_City",
-    [enums.ELegacyMapMenuIcon.ElvenRuin]    = "/Game/UI/Materials/Map/MIC_UI_MapIcon_Fort.MIC_UI_MapIcon_Fort",
-    [enums.ELegacyMapMenuIcon.FortRuin]     = "/Game/UI/Materials/Map/MIC_UI_MapIcon_Ruins.MIC_UI_MapIcon_Ruins",
+    [enums.ELegacyMapMenuIcon.ElvenRuin]    = "/Game/UI/Materials/Map/MIC_UI_MapIcon_Ruins.MIC_UI_MapIcon_Ruins",
+    [enums.ELegacyMapMenuIcon.FortRuin]     = "/Game/UI/Materials/Map/MIC_UI_MapIcon_Fort.MIC_UI_MapIcon_Fort",
     [enums.ELegacyMapMenuIcon.Mine]         = "/Game/UI/Materials/Map/MIC_UI_MapIcon_Mines.MIC_UI_MapIcon_Mines",
     [enums.ELegacyMapMenuIcon.MountainPeak] = "/Game/UI/Materials/Map/MIC_UI_MapIcon_Peaks.MIC_UI_MapIcon_Peaks",
     [enums.ELegacyMapMenuIcon.Tavern]       = "/Game/UI/Materials/Map/MIC_UI_MapIcon_Inn.MIC_UI_MapIcon_Inn",
     [enums.ELegacyMapMenuIcon.Settlement]   = "/Game/UI/Materials/Map/MIC_UI_MapIcon_Settlement.MIC_UI_MapIcon_Settlement",
-    [enums.ELegacyMapMenuIcon.DaedricShrine]= "/Game/UI/Materials/Map/MIC_UI_MapIcon_Wayshrines.MIC_UI_MapIcon_Wayshrines",
+    [enums.ELegacyMapMenuIcon.DaedricShrine]= "/Game/UI/Materials/Map/MIC_UI_MapIcon_Shrines.MIC_UI_MapIcon_Shrines",
     [enums.ELegacyMapMenuIcon.OblivionGate] = "/Game/UI/Materials/Map/MIC_UI_MapIcon_Gates.MIC_UI_MapIcon_Gates",
 };
 
@@ -59,13 +59,13 @@ enums.iconMaterialsOff = {
     [enums.ELegacyMapMenuIcon.Camp]         = "/Game/UI/Materials/Map/MIC_UI_MapIcon_CampOff.MIC_UI_MapIcon_CampOff",
     [enums.ELegacyMapMenuIcon.Cave]         = "/Game/UI/Materials/Map/MIC_UI_MapIcon_CaveOff.MIC_UI_MapIcon_CaveOff",
     [enums.ELegacyMapMenuIcon.City]         = "/Game/UI/Materials/Map/MIC_UI_MapIcon_CityOff.MIC_UI_MapIcon_CityOff",
-    [enums.ELegacyMapMenuIcon.ElvenRuin]    = "/Game/UI/Materials/Map/MIC_UI_MapIcon_FortOff.MIC_UI_MapIcon_FortOff",
-    [enums.ELegacyMapMenuIcon.FortRuin]     = "/Game/UI/Materials/Map/MIC_UI_MapIcon_RuinsOff.MIC_UI_MapIcon_RuinsOff",
+    [enums.ELegacyMapMenuIcon.ElvenRuin]    = "/Game/UI/Materials/Map/MIC_UI_MapIcon_RuinsOff.MIC_UI_MapIcon_RuinsOff",
+    [enums.ELegacyMapMenuIcon.FortRuin]     = "/Game/UI/Materials/Map/MIC_UI_MapIcon_FortOff.MIC_UI_MapIcon_FortOff",
     [enums.ELegacyMapMenuIcon.Mine]         = "/Game/UI/Materials/Map/MIC_UI_MapIcon_MinesOff.MIC_UI_MapIcon_MinesOff",
     [enums.ELegacyMapMenuIcon.MountainPeak] = "/Game/UI/Materials/Map/MIC_UI_MapIcon_PeaksOff.MIC_UI_MapIcon_PeaksOff",
     [enums.ELegacyMapMenuIcon.Tavern]       = "/Game/UI/Materials/Map/MIC_UI_MapIcon_InnOff.MIC_UI_MapIcon_InnOff",
     [enums.ELegacyMapMenuIcon.Settlement]   = "/Game/UI/Materials/Map/MIC_UI_MapIcon_SettlementOff.MIC_UI_MapIcon_SettlementOff",
-    [enums.ELegacyMapMenuIcon.DaedricShrine]= "/Game/UI/Materials/Map/MIC_UI_MapIcon_WayshrinesOff.MIC_UI_MapIcon_WayshrinesOff",
+    [enums.ELegacyMapMenuIcon.DaedricShrine]= "/Game/UI/Materials/Map/MIC_UI_MapIcon_ShrinesOff.MIC_UI_MapIcon_ShrinesOff",
     [enums.ELegacyMapMenuIcon.OblivionGate] = "/Game/UI/Materials/Map/MIC_UI_MapIcon_GatesOff.MIC_UI_MapIcon_GatesOff",
 };
 
