@@ -1,5 +1,6 @@
+-- This file is part of MapIconCompletionMarkerMod, and is borrowed from rxi with permission.
+-- See copyright notice below.
 --
--- json.lua
 --
 -- Copyright (c) 2020 rxi
 --

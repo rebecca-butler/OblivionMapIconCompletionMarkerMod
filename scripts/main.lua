@@ -1,35 +1,36 @@
--- MapIconCompletionMarkerMod: Main script
--- This mod adds clickable completion markers to icons on the world map.
+-- This file is part of MapIconCompletionMarkerMod.
 
 print("MapIconCompletionMarkerMod: script loaded")
 
+-- Includes
 local json = require("json")
 local Enums = require("enums")
 local HookManager = require("hook_manager")
 
--- Track state across ticks
+-- State tracking
 local wasInWorldMap = false
 local wasShiftDown = false
-
--- A list of keys for all icons that have been toggled off
-local toggledIconKeys = {}
-local saveFilePath = "Mods/MapIconCompletionMarkerMod/toggled_icons.json"
-
--- The currently hovered map icon
+local pollingLoopHandle = nil
 local hoveredIcon = nil
 
--- Poll user input
-local pollingLoopHandle = nil
-local navInput = FindFirstOf("VUINavigationPlayerSubsystem")
+-- A list of the keys for all icons that have been toggled off
+local toggledIconKeys = {}
 
--- Cached map icons
+-- The json file path where the toggled icon list is saved
+local saveFilePath = "Mods/MapIconCompletionMarkerMod/toggled_icons.json"
+
+-- The cached map icons
 local cachedMapIconsByKey = {}
+
+-- The player subsystem, used for input polling
+local navInput = FindFirstOf("VUINavigationPlayerSubsystem")
 
 --- Checks if the given UObject is valid
 local function IsValidObject(obj)
     return obj and obj:IsValid()
 end
 
+--- Delays execution of the given callback by a number of seconds
 function Delay(seconds, callback)
     local startTime = os.clock()
     LoopAsync(50, function()
@@ -41,20 +42,16 @@ function Delay(seconds, callback)
     end)
 end
 
---- Retrieves saved list of toggled icons from json
+--- Retrieves the saved list of toggled icons from the json file
 local function LoadToggledIcons()
-    print("[DEBUG] Loading icons")
     local file = io.open(saveFilePath, "r")
-    if not file then
-        return
-    end
+    if not file then return end
 
     local contents = file:read("*a")
     file:close()
 
-    if not contents or contents:match("^%s*$") then
-        return
-    end
+    -- Ignore the file contents if empty
+    if not contents or contents:match("^%s*$") then return end
 
     local success, data = pcall(json.decode, contents)
     if success and type(data) == "table" then
@@ -67,6 +64,17 @@ local function LoadToggledIcons()
     end
 end
 
+--- Saves current list of toggled icons to json
+local function SaveToggledIcons()
+    local file = io.open(saveFilePath, "w")
+    if not file then return end
+
+    local contents = json.encode(toggledIconKeys)
+    file:write(contents)
+    file:close()
+end
+
+--- Caches map icons into a table indexed by their key
 local function CacheMapIcons()
     cachedMapIconsByKey = {}
     local mapIcons = FindAllOf("WBP_Modern_MapIcon_C")
@@ -78,15 +86,13 @@ local function CacheMapIcons()
     end
 end
 
--- Registers a hook when the viewport (main game window) is initialized
+--- Hook into engine event to load icon states when game starts
 NotifyOnNewObject("/Script/Altar.AltarCommonGameViewportClient", function(viewPort)
-    -- Clean up previous hooks if they exist
     if OnFadeToGameBeginEventReceived_Hook then
         UnregisterHook(OnFadeToGameBeginEventReceived_Hook)
         OnFadeToGameBeginEventReceived_Hook = nil
     end
 
-    -- Register a hook that triggers when the game begins
     OnFadeToGameBeginEventReceived_Hook = RegisterHook(
         "/Script/Altar.VLevelChangeData:OnFadeToGameBeginEventReceived",
         function(context)
@@ -98,19 +104,7 @@ NotifyOnNewObject("/Script/Altar.AltarCommonGameViewportClient", function(viewPo
     )
 end)
 
---- Saves current list of toggled icons to json
-local function SaveToggledIcons()
-    local file = io.open(saveFilePath, "w")
-    if not file then
-        return
-    end
-
-    local contents = json.encode(toggledIconKeys)
-    file:write(contents)
-    file:close()
-end
-
--- Hook into IconHovered event
+--- Hook into map icon hovered event
 local function HookIconHovered()
     HookManager.Register("IconHovered", "/Game/UI/Original/GameMenuLayer/Map/WBP_Modern_MapWidget.WBP_Modern_MapWidget_C:OnIconHovered", function(_, params)
         local mapIcon = params[1]
@@ -119,7 +113,7 @@ local function HookIconHovered()
     end)
 end
 
--- Hook into IconUnhovered event
+--- Hook into map icon unhovered event
 local function HookIconUnhovered()
     HookManager.Register("IconUnhovered", "/Game/UI/Original/GameMenuLayer/Map/WBP_Modern_MapWidget.WBP_Modern_MapWidget_C:OnIconUnhovered", function(_, params)
         local mapIcon = params[1]
@@ -130,9 +124,7 @@ end
 
 --- Toggles the map icon's material between "on" and "off" state
 local function ToggleIconState(mapIcon)
-    if not IsValidObject(mapIcon) then
-        return
-    end
+    if not IsValidObject(mapIcon) then return end
 
     local mapIconKey = mapIcon.Properties.Key:ToString()
     local mapIconType = mapIcon.Properties.Type
@@ -150,24 +142,20 @@ local function ToggleIconState(mapIcon)
 
     local newMaterial = StaticFindObject(newMaterialPath, nil)
     mapIcon.Icon:SetBrushFromMaterial(newMaterial)
-    print("[DEBUG] Set icon material to: " .. newMaterialPath)
 
     SaveToggledIcons()
 end
 
--- Starts polling for user input
+--- Starts polling for user input (Shift + Hover)
 local function StartInputPollingLoop()
     if pollingLoopHandle then return end
 
     pollingLoopHandle = LoopAsync(50, function()
         if not IsValidObject(navInput) then
             navInput = FindFirstOf("VUINavigationPlayerSubsystem")
-            if not IsValidObject(navInput) then
-                return false
-            end
+            if not IsValidObject(navInput) then return false end
         end
 
-        -- Poll Shift key
         local shiftDown = navInput:IsShiftKeyDown()
         if shiftDown and not wasShiftDown and hoveredIcon then
             ToggleIconState(hoveredIcon)
@@ -178,30 +166,28 @@ local function StartInputPollingLoop()
     end)
 end
 
--- Stops polling for user input
+--- Stops polling for user input
 local function StopInputPollingLoop()
     if pollingLoopHandle then
         pollingLoopHandle:Cancel()
         pollingLoopHandle = nil
     end
-
     wasShiftDown = false
 end
 
---- Update the map icons with the current toggled state
+--- Updates the material of all cached icons based on toggled state
 local function ApplyToggledIcons()
     for key, _ in pairs(toggledIconKeys) do
         local mapIcon = cachedMapIconsByKey[key]
         if mapIcon then
-            print("[DEBUG] Found match with cached map icon")
             local mapIconType = mapIcon.Properties.Type
             local materialPath = Enums.iconMaterialsOff[mapIconType]
+
             local material = StaticFindObject(materialPath, nil)
             if material then
-                print("[DEBUG] Setting off material for type: " .. tostring(mapIconType))
                 mapIcon.Icon:SetBrushFromMaterial(material)
             else
-                print("[CRITICAL] Could not load material from path: " .. materialPath)
+                print("[ERROR] Could not load material from path: " .. materialPath)
             end
         else
             print("[ERROR] Failed to find match with cached map icon")
@@ -212,18 +198,12 @@ end
 --- Determines whether the player is currently viewing the world map
 local function IsOnMapPage()
     local playerMenu = FindFirstOf("VLegacyPlayerMenu")
-    if not IsValidObject(playerMenu) then
-        return false
-    end
+    if not IsValidObject(playerMenu) then return false end
 
     local playerMenuViewModel = playerMenu:GetViewModelRef()
-    if not IsValidObject(playerMenuViewModel) then
-        return false
-    end
+    if not IsValidObject(playerMenuViewModel) then return false end
 
-    if not playerMenuViewModel:IsVisible() then
-        return false
-    end
+    if not playerMenuViewModel:IsVisible() then return false end
 
     local currentPage = playerMenuViewModel:GetCurrentPage()
     return currentPage == Enums.ELegacyPlayerMenuPage.Map
@@ -261,6 +241,5 @@ LoopAsync(200, function()
     end
 
     wasInWorldMap = isInWorldMap
-
     return false
 end)
