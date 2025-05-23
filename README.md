@@ -16,7 +16,7 @@ You can manually edit this file if needed.
 ## Installation
 1. Download and install UE4SS.
 2. Download the zip file and extract the contents.
-3. Place the `MapIconCompletionMarkerMod` folder into `Steam\steamapps\common\Oblivion Remastered\OblivionRemastered\Binaries\Win64\Mods`.
+3. Place the `MapIconCompletionMarkerMod` folder into `Steam\steamapps\common\Oblivion Remastered\OblivionRemastered\Binaries\Win64\ue4ss\Mods`.
 
 ## FAQ
 Q: Does this work with controller input?

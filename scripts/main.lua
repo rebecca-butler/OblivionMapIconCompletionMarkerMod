@@ -17,7 +17,7 @@ local hoveredIcon = nil
 local toggledIconKeys = {}
 
 -- The json file path where the toggled icon list is saved
-local saveFilePath = "Mods/MapIconCompletionMarkerMod/toggled_icons.json"
+local saveFilePath = "ue4ss/Mods/MapIconCompletionMarkerMod/toggled_icons.json"
 
 -- The cached map icons
 local cachedMapIconsByKey = {}
@@ -99,7 +99,9 @@ NotifyOnNewObject("/Script/Altar.AltarCommonGameViewportClient", function(viewPo
             if not IsValidObject(viewPort) then
                 return
             end
-            LoadToggledIcons()
+            if next(toggledIconKeys) == nil then
+                LoadToggledIcons()
+            end
         end
     )
 end)
@@ -133,24 +135,33 @@ local function ToggleIconState(mapIcon)
     if toggledIconKeys[mapIconKey] then
         -- The icon is toggled off, set it back to on
         newMaterialPath = Enums.iconMaterialsOn[mapIconType]
-        toggledIconKeys[mapIconKey] = nil
+        print("[DEBUG] User toggled icon on: " .. mapIconKey)
     else
         -- The icon is on, toggle it off
         newMaterialPath = Enums.iconMaterialsOff[mapIconType]
-        toggledIconKeys[mapIconKey] = true
+        print("[DEBUG] User toggled icon off: " .. mapIconKey)
     end
 
     local newMaterial = StaticFindObject(newMaterialPath, nil)
-    mapIcon.Icon:SetBrushFromMaterial(newMaterial)
+    if newMaterial then
+        if toggledIconKeys[mapIconKey] then
+            toggledIconKeys[mapIconKey] = nil
+        else
+            toggledIconKeys[mapIconKey] = true
+        end
 
-    SaveToggledIcons()
+        mapIcon.Icon:SetBrushFromMaterial(newMaterial)
+        SaveToggledIcons()
+    else
+        print("[ERROR] Material not found for type: " .. tostring(mapIconType))
+    end
 end
 
 --- Starts polling for user input (Shift + Hover)
 local function StartInputPollingLoop()
     if pollingLoopHandle then return end
 
-    pollingLoopHandle = LoopAsync(50, function()
+    pollingLoopHandle = LoopAsync(30, function()
         if not IsValidObject(navInput) then
             navInput = FindFirstOf("VUINavigationPlayerSubsystem")
             if not IsValidObject(navInput) then return false end
@@ -177,21 +188,54 @@ end
 
 --- Updates the material of all cached icons based on toggled state
 local function ApplyToggledIcons()
+    local keysPending = {}
+
     for key, _ in pairs(toggledIconKeys) do
         local mapIcon = cachedMapIconsByKey[key]
-        if mapIcon then
+
+        if not mapIcon then
+            print("[WARN] Cache miss for icon key: " .. key)
+            table.insert(keysPending, key)
+        else
             local mapIconType = mapIcon.Properties.Type
             local materialPath = Enums.iconMaterialsOff[mapIconType]
-
-            local material = StaticFindObject(materialPath, nil)
+            local material = StaticFindObject(materialPath)
             if material then
                 mapIcon.Icon:SetBrushFromMaterial(material)
+                print("[DEBUG] Applied off material to " .. key)
             else
-                print("[ERROR] Could not load material from path: " .. materialPath)
+                print("[ERROR] Material not found for type: " .. tostring(mapIconType))
+                table.insert(keysPending, key)
             end
-        else
-            print("[ERROR] Failed to find match with cached map icon")
         end
+    end
+
+    -- Retry once after a short delay if any icons were missing
+    if #keysPending > 0 then
+        Delay(0.2, function()
+            CacheMapIcons()
+            for _, key in ipairs(keysPending) do
+                local mapIcon = cachedMapIconsByKey[key]
+                if mapIcon then
+                    local mapIconType = mapIcon.Properties.Type
+                    local materialPath = Enums.iconMaterialsOff[mapIconType]
+                    local material = StaticFindObject(materialPath)
+                    if material then
+                        mapIcon.Icon:SetBrushFromMaterial(material)
+                        print("[DEBUG] (Retry) Applied off material to " .. key)
+                    else
+                        print("[ERROR] (Retry) Material not found for type: " .. tostring(mapIconType))
+                    end
+                else
+                    print("[ERROR] Still missing map icon with key: " .. key)
+                end
+            end
+        end)
+    end
+
+    print("[DEBUG] Applied toggled icons:")
+    for iconKey, _ in pairs(toggledIconKeys) do
+        print(" - " .. iconKey)
     end
 end
 
@@ -221,11 +265,12 @@ LoopAsync(200, function()
     end
 
     if isInWorldMap and not wasInWorldMap then
-        print("[DEBUG] Player entered world map page")
-        CacheMapIcons()
-
         -- Apply the icons twice to get around external icon update events
-        ApplyToggledIcons()
+        CacheMapIcons()
+        Delay(0.1, function()
+            ApplyToggledIcons()
+        end)
+        CacheMapIcons()
         Delay(0.1, function()
             ApplyToggledIcons()
         end)
@@ -236,7 +281,6 @@ LoopAsync(200, function()
     end
 
     if not isInWorldMap and wasInWorldMap then
-        print("[DEBUG] Player left world map page")
         StopInputPollingLoop()
     end
 
