@@ -199,7 +199,7 @@ local function ApplyToggledIcons()
         else
             local mapIconType = mapIcon.Properties.Type
             local materialPath = Enums.iconMaterialsOff[mapIconType]
-            local material = StaticFindObject(materialPath)
+            local material = StaticFindObject(materialPath, nil)
             if material then
                 mapIcon.Icon:SetBrushFromMaterial(material)
                 print("[DEBUG] Applied off material to " .. key)
@@ -212,14 +212,14 @@ local function ApplyToggledIcons()
 
     -- Retry once after a short delay if any icons were missing
     if #keysPending > 0 then
-        Delay(0.2, function()
+        Delay(0.1, function()
             CacheMapIcons()
             for _, key in ipairs(keysPending) do
                 local mapIcon = cachedMapIconsByKey[key]
                 if mapIcon then
                     local mapIconType = mapIcon.Properties.Type
                     local materialPath = Enums.iconMaterialsOff[mapIconType]
-                    local material = StaticFindObject(materialPath)
+                    local material = StaticFindObject(materialPath, nil)
                     if material then
                         mapIcon.Icon:SetBrushFromMaterial(material)
                         print("[DEBUG] (Retry) Applied off material to " .. key)
@@ -265,7 +265,11 @@ LoopAsync(200, function()
     end
 
     if isInWorldMap and not wasInWorldMap then
-        -- Apply the icons twice to get around external icon update events
+        -- Hacky solution - apply the icons thrice to get around external icon update events
+        CacheMapIcons()
+        Delay(0.1, function()
+            ApplyToggledIcons()
+        end)
         CacheMapIcons()
         Delay(0.1, function()
             ApplyToggledIcons()
