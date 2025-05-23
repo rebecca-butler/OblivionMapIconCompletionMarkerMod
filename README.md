@@ -2,7 +2,7 @@
 This is a mod for Oblivion Remastered that allows you to to manually mark world map icons as completed.
 This helps you track what you've finished, which is especially useful for Oblivion Gates and dungeons.
 
-Available for download on Nexus Mods!
+Available for [download on Nexus Mods](https://www.nexusmods.com/oblivionremastered/mods/3786)!
 
 ## Usage
 1. Open the World Map.
@@ -19,14 +19,14 @@ You can manually edit this file if needed.
 3. Place the `MapIconCompletionMarkerMod` folder into `Steam\steamapps\common\Oblivion Remastered\OblivionRemastered\Binaries\Win64\ue4ss\Mods`.
 
 ## FAQ
-Q: Does this work with controller input?
+**Q: Does this work with controller input?**  
 A: No, currently only Shift on keyboard is supported. Controller support may be added in the future.
 
-Q: Will this break quests or other mods?
+**Q: Will this break quests or other mods?**  
 A: No, this is a visual change only. Functionality is not affected.
 
-Q: Are the toggle states recorded in my save game?
+**Q: Are the toggle states recorded in my save game?**  
 A: No. Toggle states are saved globally in a JSON file, not in your individual save games. This means if you load an older or different save, your previously toggled icons will still appear as completed (or not) based on the shared data.
 
-Q: Will Oblivion Gates be marked as completed automatically?
-A: No, you have to mark them yourself - for now!
+**Q: Will Oblivion Gates be marked as completed automatically?**  
+A: No, you have to mark them yourself — for now!
