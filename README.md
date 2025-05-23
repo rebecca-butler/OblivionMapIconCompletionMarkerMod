@@ -19,14 +19,14 @@ You can manually edit this file if needed.
 3. Place the `MapIconCompletionMarkerMod` folder into `Steam\steamapps\common\Oblivion Remastered\OblivionRemastered\Binaries\Win64\Mods`.
 
 ## FAQ
-Q: Does this work with controller input?
-A: No, currently only Shift on keyboard is supported. Controller support may be added in the future.
+- Q: Does this work with controller input?
+- A: No, currently only Shift on keyboard is supported. Controller support may be added in the future.
 
-Q: Will this break quests or other mods?
-A: No, this is a visual change only. Functionality is not affected.
+- Q: Will this break quests or other mods?
+- A: No, this is a visual change only. Functionality is not affected.
 
-Q: Are the toggle states recorded in my save game?
-A: No. Toggle states are saved globally in a JSON file, not in your individual save games. This means if you load an older or different save, your previously toggled icons will still appear as completed (or not) based on the shared data.
+- Q: Are the toggle states recorded in my save game?
+- A: No. Toggle states are saved globally in a JSON file, not in your individual save games. This means if you load an older or different save, your previously toggled icons will still appear as completed (or not) based on the shared data.
 
-Q: Will Oblivion Gates be marked as completed automatically?
-A: No, you have to mark them yourself - for now!
+- Q: Will Oblivion Gates be marked as completed automatically?
+- A: No, you have to mark them yourself - for now!
