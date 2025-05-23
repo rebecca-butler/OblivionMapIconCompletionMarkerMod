@@ -3,19 +3,16 @@
 
 print("MapIconCompletionMarkerMod: script loaded")
 
--- Load shared configuration and enums
-local Config = require("config")
+local json = require("json")
 local Enums = require("enums")
-
--- Hook handles for cleanup
-OnIconHovered_Hook = nil
-OnIconUnhovered_Hook = nil 
+local HookManager = require("hook_manager")
 
 -- Track map state across ticks
 local wasOnMapPage = false
 
 -- A list of keys for all icons that have been toggled off
 local toggledIconKeys = {}
+local saveFilePath = "Mods/MapIconCompletionMarkerMod/toggled_icons.json"
 
 -- The currently hovered map icon
 local hoveredIcon = nil
@@ -29,19 +26,62 @@ local function IsValidObject(obj)
     return obj and obj:IsValid()
 end
 
+local function SaveToggledIcons()
+    local file = io.open(saveFilePath, "w")
+    if not file then
+        return
+    end
+
+    local contents = json.encode(toggledIconKeys)
+    file:write(contents)
+    file:close()
+    print("[DEBUG] Saved toggled icons to file.")
+end
+
+local function LoadToggledIcons()
+    local file = io.open(saveFilePath, "r")
+    if not file then
+        print("[INFO] No save file found. Starting fresh.")
+        return
+    end
+
+    local contents = file:read("*a")
+    file:close()
+
+    if not contents or contents:match("^%s*$") then
+        return
+    end
+
+    local success, data = pcall(json.decode, contents)
+    if success and type(data) == "table" then
+        toggledIconKeys = data
+        print("[DEBUG] Loaded toggled icons from file.")
+    else
+        print("[ERROR] Failed to parse save file: " .. tostring(data))
+    end
+
+    local mapIcons = FindAllOf("WBP_Modern_MapIcon_C")
+    for _, mapIcon in ipairs(mapIcons) do
+        if IsValidObject(mapIcon) then
+            local key = mapIcon.Properties.Key:ToString()
+            if toggledIconKeys[key] then
+                local mapIconType = mapIcon.Properties.Type
+                local offMaterialPath = Enums.iconMaterialsOff[mapIconType]
+                local offMaterial = StaticFindObject(offMaterialPath, nil)
+                mapIcon.Icon:SetBrushFromMaterial(offMaterial)
+            end
+        end
+    end
+end
+
 --- Toggles the map icon's material between "on" and "off" state
 local function ToggleIconState(mapIcon)
-    print("[DEBUG] Starting ToggleIconState")
-
     if not IsValidObject(mapIcon) then
         return
     end
 
     local mapIconKey = mapIcon.Properties.Key:ToString()
-    print("[DEBUG] mapIconKey: " .. mapIconKey)
-
     local mapIconType = mapIcon.Properties.Type
-    print("[DEBUG] mapIconType: " .. tostring(mapIconType))
 
     local newMaterialPath
     if toggledIconKeys[mapIconKey] then
@@ -56,44 +96,29 @@ local function ToggleIconState(mapIcon)
 
     local newMaterial = StaticFindObject(newMaterialPath, nil)
     mapIcon.Icon:SetBrushFromMaterial(newMaterial)
+    print("[DEBUG] Set icon material to: " .. newMaterialPath)
+
+    SaveToggledIcons()
 end
 
 -- Hook into IconHovered event
 local function HookIconHovered()
-    local functionPath = "/Game/UI/Original/GameMenuLayer/Map/WBP_Modern_MapWidget.WBP_Modern_MapWidget_C:OnIconHovered"
-
-    if OnIconHovered_Hook then
-        UnregisterHook(OnIconHovered_Hook)
-        OnIconHovered_Hook = nil
-    end
-
-    local function HandleIconHovered(UObject, UFunctionParams)
-        local mapIcon = UFunctionParams[1]
+    HookManager.Register("IconHovered", "/Game/UI/Original/GameMenuLayer/Map/WBP_Modern_MapWidget.WBP_Modern_MapWidget_C:OnIconHovered", function(_, params)
+        local mapIcon = params[1]
         local key = mapIcon.Properties.Key:ToString()
         print("[DEBUG] Hovered icon key: " .. key)
         hoveredIcon = mapIcon
-    end
-
-    OnIconHovered_Hook = RegisterHook(functionPath, HandleIconHovered)
+    end)
 end
 
 -- Hook into IconUnhovered event
 local function HookIconUnhovered()
-    local functionPath = "/Game/UI/Original/GameMenuLayer/Map/WBP_Modern_MapWidget.WBP_Modern_MapWidget_C:OnIconUnhovered"
-
-    if OnIconUnhovered_Hook then
-        UnregisterHook(OnIconUnhovered_Hook)
-        OnIconUnhovered_Hook = nil
-    end
-
-    local function HandleIconUnhovered(UObject, UFunctionParams)
-        local mapIcon = UFunctionParams[1]
+    HookManager.Register("IconUnhovered", "/Game/UI/Original/GameMenuLayer/Map/WBP_Modern_MapWidget.WBP_Modern_MapWidget_C:OnIconUnhovered", function(_, params)
+        local mapIcon = params[1]
         local key = mapIcon.Properties.Key:ToString()
         print("[DEBUG] Unhovered icon key: " .. key)
         hoveredIcon = nil
-    end
-
-    OnIconUnhovered_Hook = RegisterHook(functionPath, HandleIconUnhovered)
+    end)
 end
 
 --- Determines whether the player is currently viewing the world map
@@ -135,9 +160,7 @@ local function StartInputPollingLoop()
 
         -- Poll Shift key
         if navInput:IsShiftKeyDown() then
-            print("[DEBUG] Shift key pressed")
             if not wasShiftDown and hoveredIcon then
-                print("[DEBUG] Shift key pressed AND icon hovered")
                 ToggleIconState(hoveredIcon)
             end
             wasShiftDown = true
@@ -152,7 +175,6 @@ end
 -- Stop polling for user input
 local function StopInputPollingLoop()
     if pollingLoopHandle then
-        print("[DEBUG] Stopping input polling loop")
         pollingLoopHandle:Cancel()
         pollingLoopHandle = nil
         wasShiftDown = false
@@ -166,6 +188,7 @@ LoopAsync(200, function()
 
     if isOnMapPage and not wasOnMapPage then
         print("[DEBUG] Player entered map page")
+        LoadToggledIcons()
         HookIconHovered()
         HookIconUnhovered()
         StartInputPollingLoop()
