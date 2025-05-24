@@ -61,7 +61,7 @@ local function LoadToggledIcons()
         toggledIconKeys = data
     end
 
-    print("[DEBUG] Loaded toggled icons:")
+    -- print("[DEBUG] Loaded toggled icons:")
     for iconKey, _ in pairs(toggledIconKeys) do
         print(" - " .. iconKey)
     end
@@ -82,7 +82,7 @@ local function GetMaterial(materialPath)
     if not cachedMaterialsByKey[materialPath] then
         local material = StaticFindObject(materialPath)
         if not material then
-            print("[Warning] Material not found: " .. tostring(materialPath))
+            print("[ERROR] Material not found: " .. tostring(materialPath))
         end
         cachedMaterialsByKey[materialPath] = material
     end
@@ -96,7 +96,10 @@ local function CacheMapIcons()
     for _, mapIcon in ipairs(mapIcons) do
         if IsValidObject(mapIcon) then
             local key = mapIcon.Properties.Key:ToString()
-            cachedMapIconsByKey[key] = mapIcon
+            if key ~= "None" then
+                cachedMapIconsByKey[key] = mapIcon
+                -- print("[DEBUG] Cached icon " .. key)
+            end
         end
     end
 end
@@ -150,11 +153,11 @@ local function ToggleIconState(mapIcon)
     if toggledIconKeys[mapIconKey] then
         -- The icon is toggled off, set it back to on
         newMaterialPath = Enums.iconMaterialsOn[mapIconType]
-        print("[DEBUG] User toggled icon on: " .. mapIconKey)
+        -- print("[DEBUG] User toggled icon on: " .. mapIconKey)
     else
         -- The icon is on, toggle it off
         newMaterialPath = Enums.iconMaterialsOff[mapIconType]
-        print("[DEBUG] User toggled icon off: " .. mapIconKey)
+        -- print("[DEBUG] User toggled icon off: " .. mapIconKey)
     end
 
     local newMaterial = GetMaterial(newMaterialPath)
@@ -206,24 +209,22 @@ end
 --- Updates the material of all cached icons based on toggled state
 local function ApplyToggledIcons()
     local keysPending = {}
-
+    local count = 0
     for key, _ in pairs(toggledIconKeys) do
+        count = count + 1
         local mapIcon = cachedMapIconsByKey[key]
 
         if not IsValidObject(mapIcon) then
-            print("[WARN] Cache miss for icon key: " .. key)
+            -- print("[WARN] Cache miss for icon key: " .. key)
             table.insert(keysPending, key)
         else
             local mapIconType = mapIcon.Properties.Type
             local materialPath = Enums.iconMaterialsOff[mapIconType]
-            local startT = os.clock()
             local material = GetMaterial(materialPath)
-            print("[timing]: StaticFindObject: " .. os.clock() - startT)
             if material then
-                local startT = os.clock()
                 mapIcon.Icon:SetBrushFromMaterial(material)
-                print("[timing]: SetBrush: " .. os.clock() - startT)
-                print("[DEBUG] Applied off material to " .. key)
+                mapIcon.Icon:InvalidateLayoutAndVolatility()
+                -- print("[DEBUG] Applied off material to " .. key)
             else
                 print("[ERROR] Material not found for type: " .. tostring(mapIconType))
                 table.insert(keysPending, key)
@@ -253,11 +254,6 @@ local function ApplyToggledIcons()
             end
         end)
     end
-
-    print("[DEBUG] Applied toggled icons:")
-    for iconKey, _ in pairs(toggledIconKeys) do
-        print(" - " .. iconKey)
-    end
 end
 
 --- Determines whether the player is currently viewing the world map
@@ -285,34 +281,8 @@ end
 -- Main map page watcher loop
 LoopAsync(200, function()
     local isInWorldMap = IsOnWorldMapPage()
-
-    -- if isInWorldMap and not wasInWorldMap then
-    --     local startT = os.clock()
-    --     CacheMapIcons()
-    --     local cacheT = os.clock()
-    --     print("[timing] CacheMapIcons: " .. os.clock() - startT)
-    --     ApplyToggledIcons()
-    --     print("[timing] ApplyToggledIcons: " .. os.clock() - cacheT)
-    --     HookIconHovered()
-    --     HookIconUnhovered()
-    --     StartInputPollingLoop()
-    --     lastIconUdpdateTime = os.clock()
-    -- end
-
-    -- if isInWorldMap then
-    --     local timeSinceUpdate = os.clock() - lastIconUdpdateTime
-    --     if timeSinceUpdate > 3.0 then
-    --         CacheMapIcons()
-    --         ApplyToggledIcons()
-    --         lastIconUdpdateTime = os.clock()
-    --     end
-    -- end
-        
-
-
     if isInWorldMap and not wasInWorldMap then
-        print("[DEBUG] Player entered world map")
-        Delay(0.5, function()
+        Delay(0.0, function()
             if IsOnWorldMapPage() then
                 CacheMapIcons()
                 ApplyToggledIcons()
@@ -321,18 +291,9 @@ LoopAsync(200, function()
                 StartInputPollingLoop()
             end
         end)
-        -- Delay(5.0, function()
-        --     if IsOnWorldMapPage() then
-        --         cachedMapIconsByKey = {}
-        --         CacheMapIcons()
-        --         cachedMaterialsByKey = {}
-        --         ApplyToggledIcons()
-        --     end
-        -- end)
     end
 
     if not isInWorldMap and wasInWorldMap then
-        print("[DEBUG] Player left world map")
         StopInputPollingLoop()
     end
 
