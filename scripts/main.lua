@@ -19,11 +19,14 @@ local toggledIconKeys = {}
 -- The json file path where the toggled icon list is saved
 local saveFilePath = "ue4ss/Mods/MapIconCompletionMarkerMod/toggled_icons.json"
 
--- The cached map icons
+-- The cached map icons and materials
 local cachedMapIconsByKey = {}
+local cachedMaterialsByKey = {}
 
 -- The player subsystem, used for input polling
 local navInput = FindFirstOf("VUINavigationPlayerSubsystem")
+
+local lastIconUdpdateTime = nil
 
 --- Checks if the given UObject is valid
 local function IsValidObject(obj)
@@ -72,6 +75,18 @@ local function SaveToggledIcons()
     local contents = json.encode(toggledIconKeys)
     file:write(contents)
     file:close()
+end
+
+--- Caches materials into a table indexed by their key
+local function GetMaterial(materialPath)
+    if not cachedMaterialsByKey[materialPath] then
+        local material = StaticFindObject(materialPath)
+        if not material then
+            print("[Warning] Material not found: " .. tostring(materialPath))
+        end
+        cachedMaterialsByKey[materialPath] = material
+    end
+    return cachedMaterialsByKey[materialPath]
 end
 
 --- Caches map icons into a table indexed by their key
@@ -142,7 +157,7 @@ local function ToggleIconState(mapIcon)
         print("[DEBUG] User toggled icon off: " .. mapIconKey)
     end
 
-    local newMaterial = StaticFindObject(newMaterialPath, nil)
+    local newMaterial = GetMaterial(newMaterialPath)
     if newMaterial then
         if toggledIconKeys[mapIconKey] then
             toggledIconKeys[mapIconKey] = nil
@@ -183,6 +198,8 @@ local function StopInputPollingLoop()
         pollingLoopHandle:Cancel()
         pollingLoopHandle = nil
     end
+    cachedMapIconsByKey = {}
+    cachedMaterialsByKey = {}
     wasShiftDown = false
 end
 
@@ -193,15 +210,19 @@ local function ApplyToggledIcons()
     for key, _ in pairs(toggledIconKeys) do
         local mapIcon = cachedMapIconsByKey[key]
 
-        if not mapIcon then
+        if not IsValidObject(mapIcon) then
             print("[WARN] Cache miss for icon key: " .. key)
             table.insert(keysPending, key)
         else
             local mapIconType = mapIcon.Properties.Type
             local materialPath = Enums.iconMaterialsOff[mapIconType]
-            local material = StaticFindObject(materialPath, nil)
+            local startT = os.clock()
+            local material = GetMaterial(materialPath)
+            print("[timing]: StaticFindObject: " .. os.clock() - startT)
             if material then
+                local startT = os.clock()
                 mapIcon.Icon:SetBrushFromMaterial(material)
+                print("[timing]: SetBrush: " .. os.clock() - startT)
                 print("[DEBUG] Applied off material to " .. key)
             else
                 print("[ERROR] Material not found for type: " .. tostring(mapIconType))
@@ -212,11 +233,11 @@ local function ApplyToggledIcons()
 
     -- Retry once after a short delay if any icons were missing
     if #keysPending > 0 then
-        Delay(0.1, function()
+        Delay(0.5, function()
             CacheMapIcons()
             for _, key in ipairs(keysPending) do
                 local mapIcon = cachedMapIconsByKey[key]
-                if mapIcon then
+                if IsValidObject(mapIcon) then
                     local mapIconType = mapIcon.Properties.Type
                     local materialPath = Enums.iconMaterialsOff[mapIconType]
                     local material = StaticFindObject(materialPath, nil)
@@ -240,7 +261,7 @@ local function ApplyToggledIcons()
 end
 
 --- Determines whether the player is currently viewing the world map
-local function IsOnMapPage()
+local function IsOnWorldMapPage()
     local playerMenu = FindFirstOf("VLegacyPlayerMenu")
     if not IsValidObject(playerMenu) then return false end
 
@@ -249,42 +270,69 @@ local function IsOnMapPage()
 
     if not playerMenuViewModel:IsVisible() then return false end
 
+    -- Check if the player is on the map page
     local currentPage = playerMenuViewModel:GetCurrentPage()
-    return currentPage == Enums.ELegacyPlayerMenuPage.Map
+    if currentPage ~= Enums.ELegacyPlayerMenuPage.Map then return false end
+
+    -- Check if the player is on the world map page
+    local VMapMenuViewModel = FindFirstOf("VMapMenuViewModel")
+    if IsValidObject(VMapMenuViewModel) then
+        return VMapMenuViewModel.CurrentPage == Enums.ELegacyMapMenuPage.WorldMap
+    end
 end
 
 
 -- Main map page watcher loop
 LoopAsync(200, function()
-    local isInWorldMap = false
-    if IsOnMapPage() then
-        local VMapMenuViewModel = FindFirstOf("VMapMenuViewModel")
-        if IsValidObject(VMapMenuViewModel) then
-            isInWorldMap = VMapMenuViewModel.CurrentPage == Enums.ELegacyMapMenuPage.WorldMap
-        end
-    end
+    local isInWorldMap = IsOnWorldMapPage()
+
+    -- if isInWorldMap and not wasInWorldMap then
+    --     local startT = os.clock()
+    --     CacheMapIcons()
+    --     local cacheT = os.clock()
+    --     print("[timing] CacheMapIcons: " .. os.clock() - startT)
+    --     ApplyToggledIcons()
+    --     print("[timing] ApplyToggledIcons: " .. os.clock() - cacheT)
+    --     HookIconHovered()
+    --     HookIconUnhovered()
+    --     StartInputPollingLoop()
+    --     lastIconUdpdateTime = os.clock()
+    -- end
+
+    -- if isInWorldMap then
+    --     local timeSinceUpdate = os.clock() - lastIconUdpdateTime
+    --     if timeSinceUpdate > 3.0 then
+    --         CacheMapIcons()
+    --         ApplyToggledIcons()
+    --         lastIconUdpdateTime = os.clock()
+    --     end
+    -- end
+        
+
 
     if isInWorldMap and not wasInWorldMap then
-        -- Hacky solution - apply the icons thrice to get around external icon update events
-        CacheMapIcons()
-        Delay(0.1, function()
-            ApplyToggledIcons()
+        print("[DEBUG] Player entered world map")
+        Delay(0.5, function()
+            if IsOnWorldMapPage() then
+                CacheMapIcons()
+                ApplyToggledIcons()
+                HookIconHovered()
+                HookIconUnhovered()
+                StartInputPollingLoop()
+            end
         end)
-        CacheMapIcons()
-        Delay(0.1, function()
-            ApplyToggledIcons()
-        end)
-        CacheMapIcons()
-        Delay(0.1, function()
-            ApplyToggledIcons()
-        end)
-
-        HookIconHovered()
-        HookIconUnhovered()
-        StartInputPollingLoop()
+        -- Delay(5.0, function()
+        --     if IsOnWorldMapPage() then
+        --         cachedMapIconsByKey = {}
+        --         CacheMapIcons()
+        --         cachedMaterialsByKey = {}
+        --         ApplyToggledIcons()
+        --     end
+        -- end)
     end
 
     if not isInWorldMap and wasInWorldMap then
+        print("[DEBUG] Player left world map")
         StopInputPollingLoop()
     end
 
