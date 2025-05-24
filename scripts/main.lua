@@ -12,6 +12,8 @@ local wasInWorldMap = false
 local wasShiftDown = false
 local pollingLoopHandle = nil
 local hoveredIcon = nil
+local loaded = false
+local OnFadeToGameBeginEventReceived_Hook = nil
 
 -- A list of the keys for all icons that have been toggled off
 local toggledIconKeys = {}
@@ -25,8 +27,6 @@ local cachedMaterialsByKey = {}
 
 -- The player subsystem, used for input polling
 local navInput = FindFirstOf("VUINavigationPlayerSubsystem")
-
-local lastIconUdpdateTime = nil
 
 --- Checks if the given UObject is valid
 local function IsValidObject(obj)
@@ -105,24 +105,14 @@ local function CacheMapIcons()
 end
 
 --- Hook into engine event to load icon states when game starts
-NotifyOnNewObject("/Script/Altar.AltarCommonGameViewportClient", function(viewPort)
-    if OnFadeToGameBeginEventReceived_Hook then
-        UnregisterHook(OnFadeToGameBeginEventReceived_Hook)
-        OnFadeToGameBeginEventReceived_Hook = nil
-    end
-
-    OnFadeToGameBeginEventReceived_Hook = RegisterHook(
-        "/Script/Altar.VLevelChangeData:OnFadeToGameBeginEventReceived",
-        function(context)
-            if not IsValidObject(viewPort) then
-                return
-            end
-            if next(toggledIconKeys) == nil then
-                LoadToggledIcons()
-            end
-        end
-    )
-end)
+local function HookFadeToGameBegin()
+    if loaded then return end
+    HookManager.Register("FadeToGameBegin", "/Script/Altar.VLevelChangeData:OnFadeToGameBeginEventReceived", function(context)
+        LoadToggledIcons()
+        loaded = true
+        HookManager.Unregister("FadeToGameBegin")
+    end)
+end
 
 --- Hook into map icon hovered event
 local function HookIconHovered()
@@ -277,12 +267,13 @@ local function IsOnWorldMapPage()
     end
 end
 
+HookFadeToGameBegin()
 
 -- Main map page watcher loop
 LoopAsync(200, function()
     local isInWorldMap = IsOnWorldMapPage()
     if isInWorldMap and not wasInWorldMap then
-        Delay(0.0, function()
+        Delay(0.5, function()
             if IsOnWorldMapPage() then
                 CacheMapIcons()
                 ApplyToggledIcons()
