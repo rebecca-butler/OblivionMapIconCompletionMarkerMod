@@ -18,8 +18,8 @@ local OnFadeToGameBeginEventReceived_Hook = nil
 -- A list of the keys for all icons that have been toggled off
 local toggledIconKeys = {}
 
--- The json file path where the toggled icon list is saved
-local saveFilePath = "ue4ss/Mods/MapIconCompletionMarkerMod/toggled_icons.json"
+-- The directory where the toggled icon list is saved
+local saveFileDir = "ue4ss/Mods/MapIconCompletionMarkerMod/"
 
 -- The cached map icons and materials
 local cachedMapIconsByKey = {}
@@ -45,10 +45,34 @@ function Delay(seconds, callback)
     end)
 end
 
+--- Gets the file path where the toggled icon list is saved
+local function GetJsonFilePath()
+    local subsystem = FindFirstOf("VAltarUISubsystem")
+    if not IsValidObject(subsystem) then
+        print("[ERROR] No save menu item found")
+        return nil
+    end
+
+    local playerName = subsystem:GetPlayerNameTextFromLastLoadedSave()
+    local path = saveFileDir .. playerName:ToString() .. "_toggled_icons.json"
+    return path
+end
+
 --- Retrieves the saved list of toggled icons from the json file
 local function LoadToggledIcons()
-    local file = io.open(saveFilePath, "r")
-    if not file then return end
+    local path = GetJsonFilePath()
+    local file = io.open(GetJsonFilePath(), "r")
+    if not file then
+        print("Toggled icon file not found, creating new one: " .. path)
+        local newFile = io.open(path, "w")
+        if newFile then
+            newFile:write("{}")
+            newFile:close()
+        else
+            print("[ERROR] Failed to create file: " .. path)
+        end
+        return
+    end
 
     local contents = file:read("*a")
     file:close()
@@ -69,7 +93,7 @@ end
 
 --- Saves current list of toggled icons to json
 local function SaveToggledIcons()
-    local file = io.open(saveFilePath, "w")
+    local file = io.open(GetJsonFilePath(), "w")
     if not file then return end
 
     local contents = json.encode(toggledIconKeys)
