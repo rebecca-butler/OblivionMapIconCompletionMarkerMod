@@ -6,6 +6,7 @@ print("MapIconCompletionMarkerMod: script loaded")
 local json = require("json")
 local Enums = require("enums")
 local HookManager = require("hook_manager")
+local Config = require("config")
 
 -- State tracking
 local wasInWorldMap = false
@@ -128,16 +129,6 @@ local function CacheMapIcons()
     end
 end
 
---- Hook into engine event to load icon states when game starts
-local function HookFadeToGameBegin()
-    if loaded then return end
-    HookManager.Register("FadeToGameBegin", "/Script/Altar.VLevelChangeData:OnFadeToGameBeginEventReceived", function(context)
-        LoadToggledIcons()
-        loaded = true
-        HookManager.Unregister("FadeToGameBegin")
-    end)
-end
-
 --- Hook into map icon hovered event
 local function HookIconHovered()
     HookManager.Register("IconHovered", "/Game/UI/Original/GameMenuLayer/Map/WBP_Modern_MapWidget.WBP_Modern_MapWidget_C:OnIconHovered", function(_, params)
@@ -152,6 +143,18 @@ end
 local function HookIconUnhovered()
     HookManager.Register("IconUnhovered", "/Game/UI/Original/GameMenuLayer/Map/WBP_Modern_MapWidget.WBP_Modern_MapWidget_C:OnIconUnhovered", function(_, params)
         hoveredIcon = nil
+    end)
+end
+
+--- Hook into engine event to load icon states when game starts
+local function HookFadeToGameBegin()
+    if loaded then return end
+    HookManager.Register("FadeToGameBegin", "/Script/Altar.VLevelChangeData:OnFadeToGameBeginEventReceived", function(context)
+        LoadToggledIcons()
+        HookIconHovered()
+        HookIconUnhovered()
+        loaded = true
+        HookManager.Unregister("FadeToGameBegin")
     end)
 end
 
@@ -247,7 +250,7 @@ local function ApplyToggledIcons()
 
     -- Retry once after a short delay if any icons were missing
     if #keysPending > 0 then
-        Delay(0.5, function()
+        Delay(Config.delaySeconds, function()
             if not IsOnWorldMapPage() then return end
             CacheMapIcons()
             for _, key in ipairs(keysPending) do
@@ -297,16 +300,12 @@ HookFadeToGameBegin()
 LoopAsync(200, function()
     local isInWorldMap = IsOnWorldMapPage()
     if isInWorldMap and not wasInWorldMap then
-        Delay(0.5, function()
+        Delay(Config.delaySeconds, function()
             if IsOnWorldMapPage() then
                 cachedMapIconsByKey = {}
                 cachedMaterialsByKey = {}
                 CacheMapIcons()
                 ApplyToggledIcons()
-                HookManager.Unregister("IconHovered")
-                HookManager.Unregister("IconUnhovered")
-                HookIconHovered()
-                HookIconUnhovered()
                 StartInputPollingLoop()
             end
         end)
