@@ -142,16 +142,15 @@ end
 local function HookIconHovered()
     HookManager.Register("IconHovered", "/Game/UI/Original/GameMenuLayer/Map/WBP_Modern_MapWidget.WBP_Modern_MapWidget_C:OnIconHovered", function(_, params)
         local mapIcon = params[1]
-        local key = mapIcon.Properties.Key:ToString()
-        hoveredIcon = mapIcon
+        if IsValidObject(mapIcon) then
+            hoveredIcon = mapIcon
+        end
     end)
 end
 
 --- Hook into map icon unhovered event
 local function HookIconUnhovered()
     HookManager.Register("IconUnhovered", "/Game/UI/Original/GameMenuLayer/Map/WBP_Modern_MapWidget.WBP_Modern_MapWidget_C:OnIconUnhovered", function(_, params)
-        local mapIcon = params[1]
-        local key = mapIcon.Properties.Key:ToString()
         hoveredIcon = nil
     end)
 end
@@ -194,17 +193,19 @@ local function StartInputPollingLoop()
     if pollingLoopHandle then return end
 
     pollingLoopHandle = LoopAsync(30, function()
-        if not IsValidObject(navInput) then
-            navInput = FindFirstOf("VUINavigationPlayerSubsystem")
-            if not IsValidObject(navInput) then return false end
-        end
+        local success, err = pcall(function()
+            if not IsValidObject(navInput) then
+                navInput = FindFirstOf("VUINavigationPlayerSubsystem")
+                if not IsValidObject(navInput) then return end
+            end
 
-        local shiftDown = navInput:IsShiftKeyDown()
-        if shiftDown and not wasShiftDown and hoveredIcon then
-            ToggleIconState(hoveredIcon)
-        end
-        wasShiftDown = shiftDown
-
+            local shiftDown = navInput:IsShiftKeyDown()
+            if shiftDown and not wasShiftDown and hoveredIcon then
+                ToggleIconState(hoveredIcon)
+            end
+            wasShiftDown = shiftDown
+        end)
+        
         return false
     end)
 end
@@ -215,8 +216,6 @@ local function StopInputPollingLoop()
         pollingLoopHandle:Cancel()
         pollingLoopHandle = nil
     end
-    cachedMapIconsByKey = {}
-    cachedMaterialsByKey = {}
     wasShiftDown = false
 end
 
@@ -249,6 +248,7 @@ local function ApplyToggledIcons()
     -- Retry once after a short delay if any icons were missing
     if #keysPending > 0 then
         Delay(0.5, function()
+            if not IsOnWorldMapPage() then return end
             CacheMapIcons()
             for _, key in ipairs(keysPending) do
                 local mapIcon = cachedMapIconsByKey[key]
@@ -299,8 +299,12 @@ LoopAsync(200, function()
     if isInWorldMap and not wasInWorldMap then
         Delay(0.5, function()
             if IsOnWorldMapPage() then
+                cachedMapIconsByKey = {}
+                cachedMaterialsByKey = {}
                 CacheMapIcons()
                 ApplyToggledIcons()
+                HookManager.Unregister("IconHovered")
+                HookManager.Unregister("IconUnhovered")
                 HookIconHovered()
                 HookIconUnhovered()
                 StartInputPollingLoop()
