@@ -222,6 +222,27 @@ local function StopInputPollingLoop()
     wasShiftDown = false
 end
 
+--- Determines whether the player is currently viewing the world map
+local function IsOnWorldMapPage()
+    local playerMenu = FindFirstOf("VLegacyPlayerMenu")
+    if not IsValidObject(playerMenu) then return false end
+
+    local playerMenuViewModel = playerMenu:GetViewModelRef()
+    if not IsValidObject(playerMenuViewModel) then return false end
+
+    if not playerMenuViewModel:IsVisible() then return false end
+
+    -- Check if the player is on the map page
+    local currentPage = playerMenuViewModel:GetCurrentPage()
+    if currentPage ~= Enums.ELegacyPlayerMenuPage.Map then return false end
+
+    -- Check if the player is on the world map page
+    local VMapMenuViewModel = FindFirstOf("VMapMenuViewModel")
+    if IsValidObject(VMapMenuViewModel) then
+        return VMapMenuViewModel.CurrentPage == Enums.ELegacyMapMenuPage.WorldMap
+    end
+end
+
 --- Updates the material of all cached icons based on toggled state
 local function ApplyToggledIcons()
     local keysPending = {}
@@ -270,27 +291,6 @@ local function ApplyToggledIcons()
                 end
             end
         end)
-    end
-end
-
---- Determines whether the player is currently viewing the world map
-local function IsOnWorldMapPage()
-    local playerMenu = FindFirstOf("VLegacyPlayerMenu")
-    if not IsValidObject(playerMenu) then return false end
-
-    local playerMenuViewModel = playerMenu:GetViewModelRef()
-    if not IsValidObject(playerMenuViewModel) then return false end
-
-    if not playerMenuViewModel:IsVisible() then return false end
-
-    -- Check if the player is on the map page
-    local currentPage = playerMenuViewModel:GetCurrentPage()
-    if currentPage ~= Enums.ELegacyPlayerMenuPage.Map then return false end
-
-    -- Check if the player is on the world map page
-    local VMapMenuViewModel = FindFirstOf("VMapMenuViewModel")
-    if IsValidObject(VMapMenuViewModel) then
-        return VMapMenuViewModel.CurrentPage == Enums.ELegacyMapMenuPage.WorldMap
     end
 end
 
