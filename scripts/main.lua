@@ -148,13 +148,16 @@ end
 
 --- Hook into engine event to load icon states when game starts
 local function HookFadeToGameBegin()
-    if loaded then return end
-    HookManager.Register("FadeToGameBegin", "/Script/Altar.VLevelChangeData:OnFadeToGameBeginEventReceived", function(context)
-        LoadToggledIcons()
-        HookIconHovered()
-        HookIconUnhovered()
-        loaded = true
-        HookManager.Unregister("FadeToGameBegin")
+    -- Add a delay before registering hooks to prevent them from being clobbered by other mods.
+    Delay(1.0, function()
+        if loaded then return end
+        HookManager.Register("FadeToGameBegin", "/Script/Altar.VLevelChangeData:OnFadeToGameBeginEventReceived", function(context)
+            LoadToggledIcons()
+            HookIconHovered()
+            HookIconUnhovered()
+            loaded = true
+            HookManager.Unregister("FadeToGameBegin")
+        end)
     end)
 end
 
