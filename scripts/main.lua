@@ -159,14 +159,14 @@ local function HookFadeToGameBegin()
     if loaded then return end
     HookManager.Register("FadeToGameBegin", "/Script/Altar.VLevelChangeData:OnFadeToGameBeginEventReceived", function(context)
         print("[MapIconCompletionMarkerMod] [DEBUG] FadeToGameBegin triggered!")
-        -- LoadToggledIcons()
+        LoadToggledIcons()
         print("[MapIconCompletionMarkerMod] [DEBUG] Loaded icons")
-        -- HookIconHovered()
+        HookIconHovered()
         print("[MapIconCompletionMarkerMod] [DEBUG] Hooked HookIconHovered")
-        -- HookIconUnhovered()
+        HookIconUnhovered()
         print("[MapIconCompletionMarkerMod] [DEBUG] Hooked HookIconUnhovered")
         loaded = true
-        -- HookManager.Unregister("FadeToGameBegin")
+        HookManager.Unregister("FadeToGameBegin")
         print("[MapIconCompletionMarkerMod] [DEBUG] Unregistered FadeToGameBegin")
     end)
 end
