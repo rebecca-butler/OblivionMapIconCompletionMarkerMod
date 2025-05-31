@@ -46,16 +46,21 @@ local function Delay(seconds, callback)
     end)
 end
 
---- Gets the file path where the toggled icon list is saved
-local function GetJsonFilePath()
+--- Gets the player name
+local function GetPlayerName()
     local subsystem = FindFirstOf("VAltarUISubsystem")
     if not IsValidObject(subsystem) then
-        print("[MapIconCompletionMarkerMod] [ERROR] No save menu item found")
         return nil
     end
 
     local playerName = subsystem:GetPlayerNameTextFromLastLoadedSave()
-    local path = saveFileDir .. playerName:ToString() .. "_toggled_icons.json"
+    return playerName:ToString()
+end
+
+--- Gets the file path where the toggled icon list is saved
+local function GetJsonFilePath()
+    local playerName = GetPlayerName()
+    local path = saveFileDir .. playerName .. "_toggled_icons.json"
     return path
 end
 
@@ -139,17 +144,6 @@ local function HookIconUnhovered()
         hoveredIcon = nil
     end)
 end
-
---- Load icon states when game starts
-NotifyOnNewObject("/Script/Engine.World", function(world)
-    if loaded then return end
-    if not IsValidObject(world) then return end
-
-    LoadToggledIcons()
-    HookIconHovered()
-    HookIconUnhovered()
-    loaded = true
-end)
 
 --- Toggles the map icon's material between "on" and "off" state
 local function ToggleIconState(mapIcon)
@@ -285,6 +279,18 @@ end
 
 -- Main map page watcher loop
 LoopAsync(200, function()
+    if not loaded then
+        local playerName = GetPlayerName()
+        if playerName == nil or playerName == "" then
+            return false
+        else
+            LoadToggledIcons()
+            HookIconHovered()
+            HookIconUnhovered()
+            loaded = true
+        end
+    end
+
     local isInWorldMap = IsOnWorldMapPage()
     if isInWorldMap and not wasInWorldMap then
         Delay(Config.delaySeconds, function()
