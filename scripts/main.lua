@@ -64,7 +64,7 @@ local function LoadToggledIcons()
     local path = GetJsonFilePath()
     local file = io.open(GetJsonFilePath(), "r")
     if not file then
-        print("[MapIconCompletionMarkerMod] Toggled icon file not found, creating new one: " .. path)
+        print("[MapIconCompletionMarkerMod] [DEBUG] Toggled icon file not found, creating new one: " .. path)
         local newFile = io.open(path, "w")
         if newFile then
             newFile:write("{}")
@@ -140,26 +140,11 @@ local function HookIconUnhovered()
     end)
 end
 
---- Hook into engine event to load icon states when game starts
--- local function HookFadeToGameBegin()
---     -- Add a delay before registering hooks to prevent them from being clobbered by other mods.
---     Delay(1.2, function()
---         if loaded then return end
---         HookManager.Register("FadeToGameBegin", "/Script/Altar.VLevelChangeData:OnFadeToGameBeginEventReceived", function(context)
---             LoadToggledIcons()
---             HookIconHovered()
---             HookIconUnhovered()
---             loaded = true
---             HookManager.Unregister("FadeToGameBegin")
---         end)
---     end)
--- end
-
+--- Load icon states when game starts
 NotifyOnNewObject("/Script/Engine.World", function(world)
-    print("[MapIconCompletionMarkerMod] [DEBUG] World has been created ")
-    if not IsValidObject(world) then return end
-
     if loaded then return end
+
+    if not IsValidObject(world) then return end
 
     LoadToggledIcons()
     HookIconHovered()
@@ -245,9 +230,10 @@ local function IsOnWorldMapPage()
 
     -- Check if the player is on the world map page
     local VMapMenuViewModel = FindFirstOf("VMapMenuViewModel")
-    if IsValidObject(VMapMenuViewModel) then
-        return VMapMenuViewModel.CurrentPage == Enums.ELegacyMapMenuPage.WorldMap
-    end
+    if not IsValidObject(VMapMenuViewModel) then return false end
+    print("[MapIconCompletionMarkerMod] [DEBUG] Got valid VMapMenuViewModel")
+
+    return VMapMenuViewModel.CurrentPage == Enums.ELegacyMapMenuPage.WorldMap
 end
 
 --- Updates the material of all cached icons based on toggled state
