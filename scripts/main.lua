@@ -143,7 +143,6 @@ end
 --- Load icon states when game starts
 NotifyOnNewObject("/Script/Engine.World", function(world)
     if loaded then return end
-
     if not IsValidObject(world) then return end
 
     LoadToggledIcons()
@@ -231,7 +230,6 @@ local function IsOnWorldMapPage()
     -- Check if the player is on the world map page
     local VMapMenuViewModel = FindFirstOf("VMapMenuViewModel")
     if not IsValidObject(VMapMenuViewModel) then return false end
-    print("[MapIconCompletionMarkerMod] [DEBUG] Got valid VMapMenuViewModel")
 
     return VMapMenuViewModel.CurrentPage == Enums.ELegacyMapMenuPage.WorldMap
 end
