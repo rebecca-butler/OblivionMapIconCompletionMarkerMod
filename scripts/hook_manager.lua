@@ -5,7 +5,6 @@ HookManager.activeHooks = {}
 
 -- Register a hook and remember the callback IDs
 function HookManager.Register(key, functionPath, callback)
-    HookManager.Unregister(key)
     local preId, postId = RegisterHook(functionPath, callback)
     HookManager.activeHooks[key] = {
         path = functionPath,

@@ -1,6 +1,6 @@
 -- This file is part of MapIconCompletionMarkerMod.
 
-print("MapIconCompletionMarkerMod: script loaded")
+print("[MapIconCompletionMarkerMod] MapIconCompletionMarkerMod: script loaded")
 
 -- Includes
 local json = require("json")
@@ -35,7 +35,7 @@ local function IsValidObject(obj)
 end
 
 --- Delays execution of the given callback by a number of seconds
-function Delay(seconds, callback)
+local function Delay(seconds, callback)
     local startTime = os.clock()
     LoopAsync(50, function()
         if os.clock() - startTime >= seconds then
@@ -50,7 +50,7 @@ end
 local function GetJsonFilePath()
     local subsystem = FindFirstOf("VAltarUISubsystem")
     if not IsValidObject(subsystem) then
-        print("[ERROR] No save menu item found")
+        print("[MapIconCompletionMarkerMod] [ERROR] No save menu item found")
         return nil
     end
 
@@ -64,13 +64,13 @@ local function LoadToggledIcons()
     local path = GetJsonFilePath()
     local file = io.open(GetJsonFilePath(), "r")
     if not file then
-        print("Toggled icon file not found, creating new one: " .. path)
+        print("[MapIconCompletionMarkerMod] [DEBUG] Toggled icon file not found, creating new one: " .. path)
         local newFile = io.open(path, "w")
         if newFile then
             newFile:write("{}")
             newFile:close()
         else
-            print("[ERROR] Failed to create file: " .. path)
+            print("[MapIconCompletionMarkerMod] [ERROR] Failed to create file: " .. path)
         end
         return
     end
@@ -84,11 +84,6 @@ local function LoadToggledIcons()
     local success, data = pcall(json.decode, contents)
     if success and type(data) == "table" then
         toggledIconKeys = data
-    end
-
-    -- print("[DEBUG] Loaded toggled icons:")
-    for iconKey, _ in pairs(toggledIconKeys) do
-        print(" - " .. iconKey)
     end
 end
 
@@ -107,7 +102,7 @@ local function GetMaterial(materialPath)
     if not cachedMaterialsByKey[materialPath] then
         local material = StaticFindObject(materialPath)
         if not material then
-            print("[ERROR] Material not found: " .. tostring(materialPath))
+            print("[MapIconCompletionMarkerMod] [ERROR] Material not found: " .. tostring(materialPath))
         end
         cachedMaterialsByKey[materialPath] = material
     end
@@ -123,7 +118,6 @@ local function CacheMapIcons()
             local key = mapIcon.Properties.Key:ToString()
             if key ~= "None" then
                 cachedMapIconsByKey[key] = mapIcon
-                -- print("[DEBUG] Cached icon " .. key)
             end
         end
     end
@@ -146,17 +140,16 @@ local function HookIconUnhovered()
     end)
 end
 
---- Hook into engine event to load icon states when game starts
-local function HookFadeToGameBegin()
+--- Load icon states when game starts
+NotifyOnNewObject("/Script/Engine.World", function(world)
     if loaded then return end
-    HookManager.Register("FadeToGameBegin", "/Script/Altar.VLevelChangeData:OnFadeToGameBeginEventReceived", function(context)
-        LoadToggledIcons()
-        HookIconHovered()
-        HookIconUnhovered()
-        loaded = true
-        HookManager.Unregister("FadeToGameBegin")
-    end)
-end
+    if not IsValidObject(world) then return end
+
+    LoadToggledIcons()
+    HookIconHovered()
+    HookIconUnhovered()
+    loaded = true
+end)
 
 --- Toggles the map icon's material between "on" and "off" state
 local function ToggleIconState(mapIcon)
@@ -169,11 +162,9 @@ local function ToggleIconState(mapIcon)
     if toggledIconKeys[mapIconKey] then
         -- The icon is toggled off, set it back to on
         newMaterialPath = Enums.iconMaterialsOn[mapIconType]
-        -- print("[DEBUG] User toggled icon on: " .. mapIconKey)
     else
         -- The icon is on, toggle it off
         newMaterialPath = Enums.iconMaterialsOff[mapIconType]
-        -- print("[DEBUG] User toggled icon off: " .. mapIconKey)
     end
 
     local newMaterial = GetMaterial(newMaterialPath)
@@ -187,7 +178,7 @@ local function ToggleIconState(mapIcon)
         mapIcon.Icon:SetBrushFromMaterial(newMaterial)
         SaveToggledIcons()
     else
-        print("[ERROR] Material not found for type: " .. tostring(mapIconType))
+        print("[MapIconCompletionMarkerMod] [ERROR] Material not found for type: " .. tostring(mapIconType))
     end
 end
 
@@ -238,9 +229,9 @@ local function IsOnWorldMapPage()
 
     -- Check if the player is on the world map page
     local VMapMenuViewModel = FindFirstOf("VMapMenuViewModel")
-    if IsValidObject(VMapMenuViewModel) then
-        return VMapMenuViewModel.CurrentPage == Enums.ELegacyMapMenuPage.WorldMap
-    end
+    if not IsValidObject(VMapMenuViewModel) then return false end
+
+    return VMapMenuViewModel.CurrentPage == Enums.ELegacyMapMenuPage.WorldMap
 end
 
 --- Updates the material of all cached icons based on toggled state
@@ -252,7 +243,6 @@ local function ApplyToggledIcons()
         local mapIcon = cachedMapIconsByKey[key]
 
         if not IsValidObject(mapIcon) then
-            -- print("[WARN] Cache miss for icon key: " .. key)
             table.insert(keysPending, key)
         else
             local mapIconType = mapIcon.Properties.Type
@@ -261,9 +251,8 @@ local function ApplyToggledIcons()
             if material then
                 mapIcon.Icon:SetBrushFromMaterial(material)
                 mapIcon.Icon:InvalidateLayoutAndVolatility()
-                -- print("[DEBUG] Applied off material to " .. key)
             else
-                print("[ERROR] Material not found for type: " .. tostring(mapIconType))
+                print("[MapIconCompletionMarkerMod] [ERROR] Material not found for type: " .. tostring(mapIconType))
                 table.insert(keysPending, key)
             end
         end
@@ -282,19 +271,17 @@ local function ApplyToggledIcons()
                     local material = StaticFindObject(materialPath, nil)
                     if material then
                         mapIcon.Icon:SetBrushFromMaterial(material)
-                        print("[DEBUG] (Retry) Applied off material to " .. key)
+                        print("[MapIconCompletionMarkerMod] [DEBUG] (Retry) Applied off material to " .. key)
                     else
-                        print("[ERROR] (Retry) Material not found for type: " .. tostring(mapIconType))
+                        print("[MapIconCompletionMarkerMod] [ERROR] (Retry) Material not found for type: " .. tostring(mapIconType))
                     end
                 else
-                    print("[ERROR] Still missing map icon with key: " .. key)
+                    print("[MapIconCompletionMarkerMod] [ERROR] Still missing map icon with key: " .. key)
                 end
             end
         end)
     end
 end
-
-HookFadeToGameBegin()
 
 -- Main map page watcher loop
 LoopAsync(200, function()
