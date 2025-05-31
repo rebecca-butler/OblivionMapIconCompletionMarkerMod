@@ -285,8 +285,6 @@ local function ApplyToggledIcons()
     end
 end
 
--- HookFadeToGameBegin()
-
 -- Main map page watcher loop
 LoopAsync(200, function()
     local isInWorldMap = IsOnWorldMapPage()
